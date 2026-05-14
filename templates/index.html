@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Wi-Fi hazed</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --surface: #111111;
+            --surface-hover: #181818;
+            --primary: #ff1e1e;
+            --primary-hover: #cc0000;
+            --text-main: #ffffff;
+            --text-muted: #777777;
+            --accent-green: #00e676;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0; padding: 40px 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            letter-spacing: -1px;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Panel Superior Inmune */
+        .info-panel {
+            background: var(--surface);
+            padding: 20px 40px;
+            border-radius: 16px;
+            display: flex; gap: 50px;
+            margin-bottom: 40px;
+            border: 1px solid #222;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .info-item h4 { margin: 0; color: var(--text-muted); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
+        .info-item p { margin: 5px 0 0; font-family: monospace; font-size: 1.2em; color: var(--accent-green); }
+
+        .btn-scan {
+            background: var(--primary); color: white;
+            border: none; padding: 16px 50px;
+            border-radius: 12px; font-weight: 800; font-size: 1.1em;
+            cursor: pointer; margin-bottom: 40px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(255, 30, 30, 0.3);
+        }
+        .btn-scan:hover { background: var(--primary-hover); transform: translateY(-3px); box-shadow: 0 0 30px rgba(255, 30, 30, 0.6); }
+        .btn-scan:active { transform: scale(0.95); }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 25px; width: 100%; max-width: 1300px;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #222;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+        .card:hover { transform: translateY(-5px); border-color: #333; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* Input Inteligente para Renombrar */
+        .name-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.4em;
+            font-weight: 700;
+            font-family: inherit;
+            width: 85%;
+            padding: 5px 0;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .name-input:hover { border-bottom: 1px dashed var(--text-muted); }
+        .name-input:focus { outline: none; border-bottom: 1px solid var(--primary); }
+        
+        .status-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: var(--accent-green); box-shadow: 0 0 12px var(--accent-green);
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .status-dot.banned { background: var(--primary); box-shadow: 0 0 12px var(--primary); }
+
+        .data-row { margin: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .data-label { color: var(--text-muted); font-size: 0.9em; font-weight: 600; }
+        .data-value { font-family: monospace; font-size: 1.1em; color: #ccc; }
+
+        .actions { display: flex; gap: 15px; margin-top: 30px; }
+        .btn {
+            flex: 1; padding: 14px; border: none;
+            border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.9em;
+            letter-spacing: 1px; transition: all 0.2s;
+        }
+        .btn-ban { background: rgba(255, 30, 30, 0.1); color: var(--primary); border: 1px solid rgba(255, 30, 30, 0.3); }
+        .btn-ban:hover { background: var(--primary); color: white; }
+        .btn-free { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); border: 1px solid rgba(0, 230, 118, 0.3); }
+        .btn-free:hover { background: var(--accent-green); color: black; }
+        
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Control Wi-Fi hazed</h1>
+
+    <div class="info-panel">
+        <div class="info-item">
+            <h4>Tu Dispositivo (Inmune)</h4>
+            <p>{{ mi_ip }}</p>
+        </div>
+        <div class="info-item">
+            <h4>Router (Inmune)</h4>
+            <p>{{ router_ip }}</p>
+        </div>
+    </div>
+
+    <button id="scanBtn" onclick="scanNetwork()" class="btn-scan">Escanear Radares</button>
+
+    <div class="bento-grid" id="grid">
+        </div>
+
+    <script>
+        // Función para guardar el nombre en el backend
+        async function renameDevice(mac, newName) {
+            try {
+                await fetch('/rename', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mac: mac, name: newName || "Dispositivo"})
+                });
+                console.log(`Guardado: ${mac} -> ${newName}`);
+            } catch(e) {
+                console.error("Error guardando el nombre", e);
+            }
+        }
+
+        async function scanNetwork() {
+            const btn = document.getElementById('scanBtn');
+            const grid = document.getElementById('grid');
+            
+            btn.classList.add('loading');
+            btn.innerText = "ESCANEANDO...";
+            
+            try {
+                const res = await fetch('/scan');
+                const devices = await res.json();
+                
+                grid.innerHTML = '';
+                
+                if(devices.length === 0) {
+                    grid.innerHTML = '<h3 style="color:var(--text-muted)">No hay dispositivos. Recuerda ejecutar como Administrador.</h3>';
+                }
+
+                devices.forEach(dev => {
+                    const isBanned = dev.status === 'bloqueado';
+                    grid.innerHTML += `
+                        <div class="card" id="card-${dev.ip.replace(/\./g, '-')}">
+                            <div class="card-header">
+                                <input type="text" class="name-input" value="${dev.name}" 
+                                       onchange="renameDevice('${dev.mac}', this.value)" 
+                                       placeholder="Nombrar dispositivo...">
+                                
+                                <div class="status-dot ${isBanned ? 'banned' : ''}"></div>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">IP ADDRESS</span>
+                                <span class="data-value">${dev.ip}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">MAC ADDRESS</span>
+                                <span class="data-value" style="color:var(--text-muted)">${dev.mac}</span>
+                            </div>
+                            <div class="actions">
+                                <button onclick="action('${dev.ip}', 'block')" class="btn btn-ban">B A N</button>
+                                <button onclick="action('${dev.ip}', 'unblock')" class="btn btn-free">U N B A N</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                alert("Error de conexión. Revisa que el servidor Python esté encendido.");
+            } finally {
+                btn.classList.remove('loading');
+                btn.innerText = "ESCANEAR RADARES";
+            }
+        }
+
+        async function action(ip, type) {
+            const res = await fetch(`/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ip: ip})
+            });
+            const data = await res.json();
+            
+            if(data.status === 'error') {
+                alert(data.message);
+                return;
+            }
+            
+            // Efecto visual instantáneo
+            const dot = document.querySelector(`#card-${ip.replace(/\./g, '-')} .status-dot`);
+            if(type === 'block') {
+                dot.classList.add('banned');
+            } else {
+                dot.classList.remove('banned');
+            }
+        }
+        
+        // Auto-escanear al entrar
+        window.onload = scanNetwork;
+    </script>
+</body>
+</html>
