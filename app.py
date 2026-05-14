@@ -7,12 +7,12 @@ import json
 import os
 import logging
 
-# Ocultar advertencias molestas de Scapy en la terminal
+
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 
 app = Flask(__name__)
 
-# Configuración de red y base de datos
+
 MI_IP = ""
 ROUTER_IP = ""
 RANGO_RED = ""
