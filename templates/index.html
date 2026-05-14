@@ -34,7 +34,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Panel Superior Inmune */
+        
         .info-panel {
             background: var(--surface);
             padding: 20px 40px;
@@ -59,7 +59,7 @@
         .btn-scan:hover { background: var(--primary-hover); transform: translateY(-3px); box-shadow: 0 0 30px rgba(255, 30, 30, 0.6); }
         .btn-scan:active { transform: scale(0.95); }
 
-        /* Bento Grid */
+        
         .bento-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -78,7 +78,7 @@
 
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
-        /* Input Inteligente para Renombrar */
+        
         .name-input {
             background: transparent;
             border: none;
@@ -140,7 +140,7 @@
         </div>
 
     <script>
-        // Función para guardar el nombre en el backend
+        
         async function renameDevice(mac, newName) {
             try {
                 await fetch('/rename', {
@@ -218,7 +218,7 @@
                 return;
             }
             
-            // Efecto visual instantáneo
+            
             const dot = document.querySelector(`#card-${ip.replace(/\./g, '-')} .status-dot`);
             if(type === 'block') {
                 dot.classList.add('banned');
@@ -227,7 +227,7 @@
             }
         }
         
-        // Auto-escanear al entrar
+        
         window.onload = scanNetwork;
     </script>
 </body>
